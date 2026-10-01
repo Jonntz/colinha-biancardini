@@ -18,6 +18,7 @@ interface SnapshotFile {
 const SNAPSHOT: SnapshotFile = snapshot;
 
 const indexes = new Map<PositionId, CandidateIndex>();
+let localPhotos: Map<string, string> | null = null;
 
 export function getSnapshotIndex(position: PositionId): CandidateIndex {
   let index = indexes.get(position);
@@ -26,6 +27,17 @@ export function getSnapshotIndex(position: PositionId): CandidateIndex {
     indexes.set(position, index);
   }
   return index;
+}
+
+/** Foto estática do candidato em /public (vale também para resultados vindos do TSE ao vivo). */
+export function getLocalPhoto(candidateId: string): string | null {
+  if (!localPhotos) {
+    localPhotos = new Map();
+    for (const records of Object.values(SNAPSHOT.positions)) {
+      for (const record of records) if (record.photo) localPhotos.set(record.id, record.photo);
+    }
+  }
+  return localPhotos.get(candidateId) ?? null;
 }
 
 export const SNAPSHOT_GENERATED_AT = SNAPSHOT.generatedAt;

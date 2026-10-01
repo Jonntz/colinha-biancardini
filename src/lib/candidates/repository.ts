@@ -3,7 +3,7 @@ import "server-only";
 import type { Candidate, CandidateSource, PositionId } from "@/types/candidate";
 import { formatCandidateName } from "./format";
 import { pickCandidate, type CandidateRecord } from "./record";
-import { getSnapshotIndex } from "./snapshot";
+import { getLocalPhoto, getSnapshotIndex } from "./snapshot";
 import { electoralUnit, getTseIndex } from "./tse";
 
 /** Depois de uma falha do TSE, usa só o snapshot por 1 min para não pagar o timeout em cada busca. */
@@ -25,7 +25,8 @@ function toCandidate(position: PositionId, record: CandidateRecord | null): Cand
     number: String(record.number),
     name: formatCandidateName(record.name),
     party: record.party,
-    photoUrl: `/api/photos/${electoralUnit(position)}/${record.id}`,
+    // Arquivo estático quando existe: o TSE recusa IPs de datacenter, então o proxy falha em produção.
+    photoUrl: getLocalPhoto(record.id) ?? `/api/photos/${electoralUnit(position)}/${record.id}`,
     status: record.status,
     fit: record.fit,
   };

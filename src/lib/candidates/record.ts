@@ -8,6 +8,8 @@ export interface CandidateRecord {
   party: string;
   fit: boolean;
   status: string;
+  /** Foto baixada para public/ pelo `npm run sync:tse` (só no snapshot; null se o TSE não tiver). */
+  photo?: string | null;
 }
 
 export type CandidateIndex = ReadonlyMap<number, readonly CandidateRecord[]>;

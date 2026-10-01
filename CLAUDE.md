@@ -18,7 +18,7 @@ Aplicação web (Next.js App Router) para o eleitor de **Minas Gerais** montar a
 | `npm start`         | Sobe o build de produção                                                   |
 | `npm run lint`      | ESLint (flat config do Next 16 + regras do React Compiler)                 |
 | `npm run typecheck` | `next typegen` + `tsc --noEmit` (gera `RouteContext`/`LayoutProps`)        |
-| `npm run sync:tse`  | Atualiza o snapshot offline (`src/data/tse-snapshot.json` e `parties.json`) |
+| `npm run sync:tse`  | Atualiza o snapshot (`src/data/*.json`) e baixa fotos novas p/ `public/candidatos/tse/` |
 
 ## Stack
 
@@ -59,6 +59,7 @@ src/
   types/       candidate.ts
 scripts/sync-tse-snapshot.mjs
 public/candidatos/   fotos dos candidatos fixos (recortadas de colinha.png, cantos com alpha)
+public/candidatos/tse/  fotos dos cargos editáveis (Presidente, Senador, Dep. Estadual), baixadas pelo sync:tse
 ```
 
 ### Estado (Context API + useReducer)
@@ -93,8 +94,13 @@ public/candidatos/   fotos dos candidatos fixos (recortadas de colinha.png, cant
 - Lista: `/v1/candidatura/listar/{ano}/{UE}/{eleicao}/{cargo}/candidatos` — UE `BR` p/ presidente, `MG` nos demais.
   Códigos: 1 Presidente, 3 Governador, 5 Senador, 6 Dep. Federal, 7 Dep. Estadual.
 - Foto: `/arquivo/img/{eleicao}/{idCandidato}/{UE}` (JPEG/PNG ~161×225).
-- O Akamai do TSE **bloqueia curl** (403); o `fetch` do Node com User-Agent de navegador funciona.
-  Por isso o navegador nunca chama o TSE direto: tudo passa pelos Route Handlers.
+- O Akamai do TSE **bloqueia curl** (403); o `fetch` do Node com User-Agent de navegador funciona
+  a partir de IP residencial. O TSE não envia CORS, então o navegador não pode chamá-lo direto.
+- **O TSE recusa IPs de datacenter (Vercel/AWS), em qualquer região** — inclusive `gru1`. Em produção
+  a busca ao vivo sempre falha e a API responde com o snapshot; por isso as fotos dos cargos
+  editáveis ficam em `public/candidatos/tse/` (o snapshot guarda o caminho em `photo`, e
+  `getLocalPhoto` também atende resultados vindos do TSE ao vivo). `/api/photos` só é usado como
+  último recurso (útil em dev).
 - Listas grandes (Dep. Estadual ~2,4 MB) → `cache: "no-store"` + cache em memória de 30 min
   (o data cache do Next limita itens a 2 MB).
 - Fallback ("mock robusto"): `src/data/tse-snapshot.json` com dados **reais** do TSE (gerado em
@@ -152,13 +158,29 @@ public/candidatos/   fotos dos candidatos fixos (recortadas de colinha.png, cant
 ## Deploy
 
 - Qualquer host Node com Next 16 (Vercel, Netlify…). Não há variáveis obrigatórias.
-- Vercel: `vercel.json` fixa as funções em **São Paulo (`gru1`)**. Fora do Brasil (padrão `iad1`) o
-  TSE não responde e a API cai no snapshot (fotos dos candidatos digitados viram iniciais).
-- Conferir a região: o header `x-vercel-id` tem o formato `borda::função::id` — precisa aparecer
-  `::gru1::`. E `GET /api/candidates/presidente/30` deve responder `"source":"tse"`.
-- Se mesmo em `gru1` o TSE recusar, apontar `TSE_BASE_URL` para um proxy no Brasil.
+- Vercel: `vercel.json` fixa as funções em **São Paulo (`gru1`)** (header `x-vercel-id` no formato
+  `borda::função::id` deve mostrar `::gru1::`).
+- Em produção a API responde `"source":"snapshot"` — esperado, porque o TSE recusa os IPs da Vercel.
+  Recomendado na Vercel: `CANDIDATE_SOURCE=snapshot` (evita uma tentativa falha + log de aviso por
+  minuto em cada instância).
+- **Antes de cada deploy:** `npm run sync:tse` e commit de `src/data/` + `public/candidatos/tse/`
+  (é a única forma de os dados de produção acompanharem o TSE).
+- Para ter dados ao vivo em produção seria preciso um proxy com IP brasileiro não-datacenter
+  (`TSE_BASE_URL`).
 
 ## Changelog
+
+### 2026-10-01 — fotos estáticas (TSE bloqueia a Vercel)
+
+- Diagnóstico: mesmo com a função em `gru1`, a API respondia `"source":"snapshot"` e o proxy de fotos
+  dava 404 em ~130 ms (recusa imediata). Descartados: região, cache da CDN, timeout e versão do
+  Node/TLS (Node 20/22/24 funcionam localmente). Causa: o TSE recusa IPs de datacenter (AWS).
+  O TSE também não envia CORS, então chamar direto do navegador não é opção.
+- Correção: `sync:tse` baixa as 1.029 fotos dos cargos editáveis para `public/candidatos/tse/`
+  (~8 MB, incremental) e grava o caminho no snapshot (`photo`); `repository.ts` usa
+  `getLocalPhoto` antes do proxy `/api/photos`.
+- Verificado com `TSE_BASE_URL=http://127.0.0.1:9` (simula a Vercel): fotos HTTP 200 via arquivo
+  estático, fluxo E2E completo e PNG 1080×2262 com todas as fotos.
 
 ### 2026-10-01 — região das funções na Vercel
 

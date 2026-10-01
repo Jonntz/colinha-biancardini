@@ -35,8 +35,12 @@ npm run build && npm start
 
 Veja `.env.example`:
 
-- `CANDIDATE_SOURCE=snapshot` → usa só os dados locais (modo offline/mock).
+- `CANDIDATE_SOURCE=snapshot` → usa só os dados locais (modo offline/mock). **Recomendado na
+  Vercel:** o TSE recusa os IPs de datacenter, então a busca ao vivo falharia de qualquer forma.
 - `TSE_BASE_URL` → aponta a API do TSE para outro endereço (ex.: proxy no Brasil).
+
+Antes de cada deploy, rode `npm run sync:tse` e faça commit de `src/data/` e `public/candidatos/tse/`:
+é o que mantém os dados e as fotos de produção atualizados.
 
 ## API interna
 
