@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* 1u = 1px do canvas original de 1080 px (colinha.png). Registrada para herdar já calculada. */
+@property --u {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@theme {
+  --color-navy: #052e3f;
+  --color-navy-950: #031e2a;
+  --color-brand-yellow: #fdc730;
+  --color-brand-green: #1ca638;
+  --color-digit-outline: #c9d3de;
+}
+
+/* "inline" faz os utilitários usarem a expressão com var(--u) resolvida no próprio elemento. */
+@theme inline {
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-rubik), var(--font-montserrat), ui-sans-serif, sans-serif;
+
+  /* Tipografia medida no layout de referência (px do canvas de 1080) */
+  --text-c-kicker: calc(var(--u) * 25.5);
+  --text-c-title: calc(var(--u) * 108);
+  --text-c-label: calc(var(--u) * 20.5);
+  --text-c-name: calc(var(--u) * 40);
+  --text-c-name-sm: calc(var(--u) * 34);
+  --text-c-row: calc(var(--u) * 28.5);
+  --text-c-hint: calc(var(--u) * 22.5);
+  --text-c-badge: calc(var(--u) * 19.5);
+  --text-c-digit: calc(var(--u) * 54);
+  --text-c-digit-sm: calc(var(--u) * 44);
+  --text-c-footer: calc(var(--u) * 23.5);
+  --text-c-legal: calc(var(--u) * 15.5);
+
+  --radius-c-card: calc(var(--u) * 30);
+  --radius-c-photo: calc(var(--u) * 20);
+  --radius-c-box: calc(var(--u) * 16);
+  --radius-c-badge: calc(var(--u) * 10);
+}
+
+@layer components {
+  /* Define a largura disponível para a colinha (container query units). */
+  .colinha-stage {
+    container-type: inline-size;
+  }
+
+  /*
+   * A colinha é desenhada em "u". Sobrescrever --spacing aqui faz utilitários como
+   * p-28, w-150 e gap-18 valerem exatamente 28/150/18 px do layout original.
+   */
+  .colinha {
+    --colinha-w: min(100vw, 480px);
+    --u: calc(var(--colinha-w) / 1080);
+    --spacing: var(--u);
+    width: var(--colinha-w);
+  }
+
+  @supports (width: 1cqi) {
+    .colinha {
+      --colinha-w: min(100cqi, 480px);
+    }
+  }
+}
