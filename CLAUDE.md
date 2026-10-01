@@ -152,11 +152,20 @@ public/candidatos/   fotos dos candidatos fixos (recortadas de colinha.png, cant
 ## Deploy
 
 - Qualquer host Node com Next 16 (Vercel, Netlify…). Não há variáveis obrigatórias.
-- Se o servidor ficar fora do Brasil e o TSE recusar a região, a API cai no snapshot automaticamente
-  (fotos dos candidatos digitados viram iniciais). Opções: hospedar as funções em São Paulo
-  (ex.: região `gru1` na Vercel) ou apontar `TSE_BASE_URL` para um proxy no Brasil.
+- Vercel: `vercel.json` fixa as funções em **São Paulo (`gru1`)**. Fora do Brasil (padrão `iad1`) o
+  TSE não responde e a API cai no snapshot (fotos dos candidatos digitados viram iniciais).
+- Conferir a região: o header `x-vercel-id` tem o formato `borda::função::id` — precisa aparecer
+  `::gru1::`. E `GET /api/candidates/presidente/30` deve responder `"source":"tse"`.
+- Se mesmo em `gru1` o TSE recusar, apontar `TSE_BASE_URL` para um proxy no Brasil.
 
 ## Changelog
+
+### 2026-10-01 — região das funções na Vercel
+
+- Problema: em produção a API sempre respondia `"source":"snapshot"`. O header
+  `x-vercel-id: gru1::iad1::…` mostrou a função rodando em `iad1` (EUA) mesmo após trocar a região no
+  painel — a mudança só vale para deploys novos — e de lá o TSE não responde (proxy de foto dava 404).
+- Correção: `vercel.json` com `"regions": ["gru1"]`, para a região ficar versionada e valer em todo deploy.
 
 ### 2026-10-01 — teste local pelo celular
 
